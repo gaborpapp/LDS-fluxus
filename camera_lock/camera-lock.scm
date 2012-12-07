@@ -2,9 +2,10 @@
 (clear-colour (rgb->hsv (vector .5 .3 .3)))
 
 (define cam #(-0.6708927154541016 0.10036182403564453 -0.7347314357757568 0.0 -0.014769908040761948 0.988794207572937 0.1485525220632553 0.0 0.7414071559906006 0.11051473766565323 -0.6618925333023071 0.0 0.0 0.0 -54.13999938964844 1.0))
-(set-camera-transform cam)
+;(set-camera-transform cam)
 (unlock-camera)
 
+(define poz (vector 0 0 0))
 
 (with-state 
     (build-torus .7 6 3 36)
@@ -49,8 +50,6 @@
         )    
     )
 
-
-
 (define obj (build-cube)) 
 
 (with-state  
@@ -63,18 +62,21 @@
     (translate (vector 0 -2 0))
     (rotate (vector 90 0 0))  
     (scale 10000) 
-    (build-plane))
+    (build-plane)
+)
 
 (lock-camera obj) 
-(camera-lag .1) 
-
-
-(define (animate) 
-    (clip (+ 3 (* (sin(time)) 1.6)) 10000)
+(camera-lag 0) 
+(define (animate)
+    (clip 2 11002)
     (with-primitive obj
         (hint-none)
         (hint-wire)
         (identity)
         
-        (translate (vector (* 12 (sin (time))) 0 (* 5 (cos (time))))))) 
+        (translate (vector (* 12 (sin (time))) 0 (+ 0 (* 5 (cos (time))))))
+        (set! poz (pdata-ref "p" 1))
+        (displayln poz)
+        )
+    )                     
 (every-frame (animate))
