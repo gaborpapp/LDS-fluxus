@@ -2,6 +2,19 @@
 
 (clear)
 
+(define-syntax pdata-rnd-map!
+  (syntax-rules ()
+    ((_ probability proc pdata-write-name pdata-read-name ...)
+     (letrec
+         ((loop (lambda (n total)
+                  (cond ((not (> n total))
+                         (when (< (rndf) probability)
+                             (pdata-set! pdata-write-name n
+                                         (proc (pdata-ref pdata-write-name n)
+                                               (pdata-ref pdata-read-name n) ...)))
+                         (loop (+ n 1) total))))))
+       (loop 0 (- (pdata-size) 1))))))
+
 (define p (build-torus 2.5 3 50 50))
 (with-primitive p
     (backfacecull 0)
