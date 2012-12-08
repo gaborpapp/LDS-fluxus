@@ -57,11 +57,13 @@
     (colour #(.9 .3 .2))
     (shader "phong_vert.glsl" "phong_frag.glsl"))
 
-;(light-position 0 #(1 0 10))
+(light-position 0 #(1 0 10))
 
 (define l (make-light 'point 'free))
-(light-diffuse 0 (vector 0 0 0))
-(light-specular 0 (vector 0 0 0))
+;(light-diffuse 0 (vector 0 0 0))
+;(light-specular 0 (vector 0 0 0))
+(light-diffuse l (vector 1 1 1))
+(light-specular l (vector 1 1 1))
 
 
 (define obj (build-locator))
