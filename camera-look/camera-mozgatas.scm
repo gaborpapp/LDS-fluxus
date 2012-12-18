@@ -5,6 +5,7 @@
 (define t2 24)
 (define r1 18)
 (define r2 38)
+(define speed 1)
 (clip .7 1000)
 ;//////////////// 
 
@@ -105,10 +106,15 @@
             (rot (- (* t2 (time)) pos))
             ;(strafe)
             )
-        
+
+        (define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 20 (time)) 0))))
+        (let ([p (with-primitive obj (get-pos))])
+            (wire-colour #(1 .9 .1))
+            (draw-line p (vadd p up)))
+
         (set-target-camera (with-primitive cam (get-pos))
             (with-primitive obj (get-pos))
-            (vector 0 0 1))
+            up)
         )    
     )
 
