@@ -1,2 +1,4 @@
 *.DS_Store
 *~
+
+phong-torus/target-cam-3.scm
