@@ -3,10 +3,11 @@
 ;//////////////// r1-r2 torus resolution
 (define t1 10)
 (define t2 24)
-(define r1 18)
+(define r1 5)
 (define r2 38)
 (define speed 0)
-(clip .3 1000)
+(clip 1 1000)
+;(blur .1)
 ;//////////////// 
 
 (define (get-pos)
@@ -66,7 +67,7 @@
         (colour #(1 1 1))
         (specular (vector .1 .1 1))    
         (texture (load-texture "textures/colors.png"))
-        (build-icosphere 3))
+        (build-icosphere 2))
     )
 
 (with-primitive iko
@@ -74,7 +75,7 @@
     (recalc-normals 0))
 
 (define cam (build-locator))
-(define pos 12)
+(define pos 33)
 (define str 0)
 
 
@@ -107,26 +108,34 @@
 (define (ikos x)
     (for ((i (in-range x)))
         (with-state
+            
+            (hint-sphere-map)
+            (colour #(1 1 1))
+            (specular (vector 1 1 1))    
+            (texture (load-texture "textures/D111.png"))
+            
+            
             (identity)
-            (rotate (vector 0 0 (* (time) t2)))
-            ;            (translate (vector (+ t2 (cos (/ 360 x))) 0 (sin (/ 360 x))))
+            (rotate (vector 1 0 (* (time) t2)))
             (translate (vmul (vector  
-            (+ (/ t2 (/ x 2)) (sin (degrees->radians (* i (/ 360 x))))) 0 
-            (cos (degrees->radians (* i (/ 360 x))))) (/ x 2)))
-            (colour (vector (/ 1 (+ 1 i)) (gl 0) 0))
+                        (+ (/ t2 (/ x (gl 0) 3)) (sin (degrees->radians (* i (/ 360 x))))) (sin x) 
+                        (cos (degrees->radians (* i (/ 360 x))))) (/ x (gl 0) 3)))
+            
             (draw-instance iko)
+            ;(draw-cube)
             )
         )
     )
 
-(smoothing-bias .98)
+(smoothing-bias .96)
 (every-frame
     (begin  
         
         (set! pos (+ pos (mouse-wheel)))
         
+        (ikos 4)        
         (ikos (+ 1 (inexact->exact (floor (* 6 (gl 0))))))  
-        
+        (ikos 22)
         (with-primitive obj 
             (identity)
             (hint-origin)          
@@ -144,7 +153,7 @@
             (wire-colour #(1 .9 .1))
             (draw-line p (vadd p up)))
         
-            (set-target-camera (with-primitive cam (get-pos))
+        (set-target-camera (with-primitive cam (get-pos))
             (with-primitive obj (get-pos))
             up)
         )    
