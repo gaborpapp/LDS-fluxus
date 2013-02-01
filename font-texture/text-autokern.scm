@@ -5,6 +5,7 @@
 
 (define (pr-width pr)
     (with-primitive pr        
+        (apply-transform)
         (let [(vx-min (vx (pdata-ref "p" 0)))
                 (vx-max (vx (pdata-ref "p" 0)))]
             (pdata-map! (lambda (p) 
@@ -29,6 +30,6 @@
             (with-primitive et (scale 0)))))
 
 
-(for [(i (in-range (length letters)))]
+(for [(i (in-range 0 (length letters)))]
     (with-primitive (list-ref letters i)
         (translate (vector (sum-kern kern i) 0 0))))
