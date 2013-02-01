@@ -6,7 +6,7 @@
 (define r1 18)
 (define r2 38)
 (define speed 0)
-(clip .7 1000)
+(clip .3 1000)
 ;//////////////// 
 
 (define (get-pos)
@@ -70,7 +70,7 @@
     )
 
 (with-primitive iko
-(hide 1)
+    (hide 1)
     (recalc-normals 0))
 
 (define cam (build-locator))
@@ -101,26 +101,31 @@
 
 (define (rot t)
     (rotate (vector 0 0 t))
-    (translate (vector t2 0 0)))
+    (translate (vector t2 0 0))
+    )
 
 (define (ikos x)
-    (when (> x 0)
+    (for ((i (in-range x)))
         (with-state
             (identity)
             (rotate (vector 0 0 (* (time) t2)))
-            (translate (vector t2 0 5))
+            ;            (translate (vector (+ t2 (cos (/ 360 x))) 0 (sin (/ 360 x))))
+            (translate (vmul (vector  
+            (+ (/ t2 (/ x 2)) (sin (degrees->radians (* i (/ 360 x))))) 0 
+            (cos (degrees->radians (* i (/ 360 x))))) (/ x 2)))
+            (colour (vector (/ 1 (+ 1 i)) (gl 0) 0))
             (draw-instance iko)
             )
-        (ikos (- x 1))
         )
     )
 
+(smoothing-bias .98)
 (every-frame
     (begin  
         
         (set! pos (+ pos (mouse-wheel)))
         
-        (ikos 1)  
+        (ikos (+ 1 (inexact->exact (floor (* 6 (gl 0))))))  
         
         (with-primitive obj 
             (identity)
@@ -139,7 +144,7 @@
             (wire-colour #(1 .9 .1))
             (draw-line p (vadd p up)))
         
-        (set-target-camera (with-primitive cam (get-pos))
+            (set-target-camera (with-primitive cam (get-pos))
             (with-primitive obj (get-pos))
             up)
         )    
