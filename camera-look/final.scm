@@ -8,7 +8,7 @@
 (define clip-near .7) ; clip plane distances - change for fov
 (define clip-far 1000)
 
-(define pp-size 2048) ; pixel primitive size for rendering
+(define pp-size 1024) ; pixel primitive size for rendering
 
 ;//////////////// 
 
@@ -16,7 +16,7 @@
 
 (set-camera-transform (mtranslate #(0 0 -10)))
 
-(define render-buffer (build-pixels 1024 1024 #t))
+(define render-buffer (build-pixels pp-size pp-size #t))
 (with-primitive render-buffer
     (scale 0))
 
