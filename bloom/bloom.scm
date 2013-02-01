@@ -12,10 +12,10 @@
 
 (with-pixels-renderer p
     (hint-sphere-map)
-    (texture (load-texture "transp.png"))
+    (texture (load-texture "fluxus-icon.png"))
     (clip 1 20)
-    (for ([i (in-range 40)])
-        (with-primitive (build-icosphere 2)
+    (for ([i (in-range 180)])
+        (with-primitive (build-cube)
             (colour (hsv->rgb (vector (rndf) .4 1)))
             (translate (vmul (srndvec) 7))
             (rotate (vmul (crndvec) 180))
@@ -28,7 +28,7 @@
 (with-primitive (build-plane)
     (scale #(21 17 1))
     (texture (pixels->texture p))
-    (bloom .3 (with-primitive p (vector (pixels-width) (pixels-height)))))
+    (bloom .5 (with-primitive p (vector (pixels-width) (pixels-height)))))
 
 (define (loop)
     (with-pixels-renderer p
