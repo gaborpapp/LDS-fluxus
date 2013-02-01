@@ -59,7 +59,15 @@
 (light-specular l (vector 1 1 1))
 
 (define obj
-    (build-locator))
+    (with-state 
+        (hint-sphere-map)
+        (colour #(1 1 1))
+        (specular (vector .1 .1 1))    
+        
+        (texture (load-texture "textures/colors.png"))
+        (build-icosphere 2)))
+(with-primitive obj
+    (recalc-normals 0))
 
 (define cam (build-locator))
 (define pos 12)
