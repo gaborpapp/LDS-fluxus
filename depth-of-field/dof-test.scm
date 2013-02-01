@@ -1,6 +1,6 @@
 (clear)
 
-(set-camera-transform (mtranslate #(0 0 -10)))
+;(set-camera-transform (mtranslate #(0 0 -10)))
 
 (define p (build-pixels 1024 1024 #t))
 
@@ -113,8 +113,15 @@
 (with-primitive p
     (scale 0))
 
+(texture-params 0 '(min linear mag linear))
+(texture-params 1 '(min linear mag linear))
+
 (define q (with-state
         (scale #(21 17 1))
+        (build-plane)))
+#;(define q (with-state
+        (translate #(1.1 0 0))
+        (texture (pixels->depth p))
         (build-plane)))
 
 (with-primitive q
@@ -123,7 +130,7 @@
     (shader-source dof-vert dof-frag)
     (shader-set! #:tColor 0 #:tDepth 1
         #:size (with-primitive p (vector (pixels-width) (pixels-height)))
-        #:maxblur 2. #:aperture 0.05 #:focus .1))
+        #:maxblur 2. #:aperture .05 #:focus .01))
 
 (define (loop)
     (with-pixels-renderer p
