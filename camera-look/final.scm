@@ -1,3 +1,5 @@
+(require "dof.ss")
+
 (define tunnel-inner-radius 11)
 (define tunnel-outer-radius 24)
 (define tunnel-slices 18)
@@ -6,14 +8,17 @@
 (define clip-near .7) ; clip plane distances - change for fov
 (define clip-far 1000)
 
-(define pp-size 1024) ; pixel primitive size for rendering
+(define pp-size 2048) ; pixel primitive size for rendering
 
 ;//////////////// 
 
 (clear)
-(clip clip-near clip-far)
+
+(set-camera-transform (mtranslate #(0 0 -10)))
 
 (define render-buffer (build-pixels 1024 1024 #t))
+(with-primitive render-buffer
+    (scale 0))
 
 (define (get-pos)
     (let ([t (get-global-transform)])
@@ -34,29 +39,33 @@
         (set-camera camera-matrix)))
 
 ;////////////////
-(define tunnel (build-torus tunnel-inner-radius tunnel-outer-radius
-                      		tunnel-slices tunnel-stacks))
-(with-primitive tunnel
-    (backfacecull 0)
-    (recalc-normals 1)
-    (pdata-map! (λ (n) (vmul n -1)) "n")
-    (hint-sphere-map)
-    (multitexture 0 (load-texture "textures/D77.png"))
-    (multitexture 1 (load-texture "textures/D111.png")))
+(define tunnel (with-pixels-renderer render-buffer
+                    (build-torus tunnel-inner-radius tunnel-outer-radius
+                                 tunnel-slices tunnel-stacks)))
 
-(define obj
-    (build-locator))
+(with-pixels-renderer render-buffer    
+    (clip clip-near clip-far)
+    (with-primitive tunnel
+        (backfacecull 0)
+        (recalc-normals 1)
+        (pdata-map! (λ (n) (vmul n -1)) "n")
+        (hint-sphere-map)
+        (multitexture 0 (load-texture "textures/D77.png"))
+        (multitexture 1 (load-texture "textures/D111.png"))))
 
-(define ico        
-        (build-icosphere 2))
+(define obj (with-pixels-renderer render-buffer
+                (build-locator)))
 
-(with-primitive ico
-    (hide 1)
-    (recalc-normals 0))
+(define ico (with-pixels-renderer render-buffer
+        (build-icosphere 2)))
 
-(define cam (build-locator))
+(with-pixels-renderer render-buffer
+    (with-primitive ico
+        (hide 1)
+        (recalc-normals 0)))
+
+(define cam (with-pixels-renderer render-buffer (build-locator)))
 (define pos 12)
-(define str 0)
 
 (define (mouse-look)
     (let* ([max tunnel-inner-radius]
@@ -82,26 +91,37 @@
             (draw-instance ico))
         (icos (- x 1))))
 
-(define (loop)
-	(icos 1)
-	
-	(with-primitive obj
-		(identity)
-		(hint-origin)          
-		(rot (* tunnel-outer-radius (time)))
-		(when (mouse-button 2) (mouse-look)))
+(define (render-tunnel)
+    (define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 20 (time)) 0))))
+    (with-pixels-renderer render-buffer
+        (icos 1)
+        
+        (with-primitive obj
+            (identity)
+            (hint-origin)          
+            (hide 1)
+            (rot (* tunnel-outer-radius (time)))
+            (when (mouse-button 2) (mouse-look)))
 
-	(with-primitive cam 
-		(identity)
-		(rot (- (* tunnel-outer-radius (time)) pos)))
-	
-	(define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 20 (time)) 0))))
-	(let ([p (with-primitive obj (get-pos))])
-		(wire-colour #(1 .9 .1))
-		(draw-line p (vadd p up)))
-	
-	(set-target-camera (with-primitive cam (get-pos))
-					   (with-primitive obj (get-pos))
-					   up))
+        (with-primitive cam 
+            (identity)
+            (rot (- (* tunnel-outer-radius (time)) pos)))
+        
+        (set-target-camera (with-primitive cam (get-pos))
+                           (with-primitive obj (get-pos))
+                           up)))
+
+
+(define plane (build-plane))
+(with-primitive plane
+    (scale #(21 17 1)))
+
+
+(define (loop)
+    (render-tunnel)
+    (with-primitive plane
+        (dof render-buffer #:aperture .09
+                           #:focus (+ .2 (* .2 (sin (* .5 (time)))))
+                           #:maxblur 1.5)))
 
 (every-frame (loop))
