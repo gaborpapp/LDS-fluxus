@@ -70,6 +70,7 @@
     )
 
 (with-primitive iko
+(hide 1)
     (recalc-normals 0))
 
 (define cam (build-locator))
