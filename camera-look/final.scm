@@ -1,4 +1,5 @@
-(require "dof.ss")
+(require lds/dof) ; os x: copy dof.ss to ~/Documents/Fluxus/collects/lds
+;(require "dof.ss")
 
 (define tunnel-inner-radius 11)
 (define tunnel-outer-radius 24)
