@@ -1,11 +1,13 @@
 (clear)
-(define text "Give my try a love")
+(define text "Give.my.try.a.love")
 (define letters '())
 (define kern '())
+(define sum-xtrans 0)
+
 
 (define (pr-width pr)
-    (with-primitive pr        
-        (apply-transform)
+    (with-primitive pr      
+        (apply-transform)  
         (let [(vx-min (vx (pdata-ref "p" 0)))
                 (vx-max (vx (pdata-ref "p" 0)))]
             (pdata-map! (lambda (p) 
@@ -29,7 +31,7 @@
             (set! kern (append kern (list (pr-width ep))))
             (with-primitive et (scale 0)))))
 
-
 (for [(i (in-range 0 (length letters)))]
+    (set! sum-xtrans (+ sum-xtrans (pr-width (list-ref letters i))))    
     (with-primitive (list-ref letters i)
-        (translate (vector (sum-kern kern i) 0 0))))
+        (translate (vector sum-xtrans 0 0))))
