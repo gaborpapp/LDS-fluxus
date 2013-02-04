@@ -1,5 +1,6 @@
 (require lds/dof) ; os x: copy dof.ss to ~/Documents/Fluxus/collects/lds
 ;(require "dof.ss")
+(require polyhedra/polyhedra)
 
 (define tunnel-inner-radius 11)
 (define tunnel-outer-radius 24)
@@ -69,7 +70,10 @@
         (build-locator)))
 
 (define ico (with-pixels-renderer render-buffer
-        (build-icosphere 3)))
+        ;(build-icosphere 3)
+        
+        (build-polyhedron 'medial-disdyakistriacontahedron)
+        ))
 
 (with-pixels-renderer render-buffer
     (with-primitive ico
