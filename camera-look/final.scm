@@ -91,7 +91,7 @@
 
 (define particles (with-pixels-renderer render-buffer
     (with-state
-        (scale 3)
+        (scale 1)
         (build-particles particle-sum))
         ))
 
