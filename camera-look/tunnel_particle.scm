@@ -3,8 +3,8 @@
 ;//////////////// r1-r2 torus resolution
 (define t1 10)
 (define t2 24)
-(define r1 5)
-(define r2 38)
+(define r1 6)
+(define r2 20)
 (define speed 0)
 (clip 1 1000)
 (define ikopoints '())
@@ -40,8 +40,8 @@
 (define p (build-torus t1 t2 r1 r2))
 (with-primitive p
     (backfacecull 0)
-    (hint-none)
-    (hint-wire)
+    ;(hint-none)
+    ;(hint-wire)
     (recalc-normals 1)
     (pdata-map!
         (lambda (n)
@@ -52,9 +52,6 @@
     (hint-sphere-map)
     (multitexture 0 (load-texture "textures/D77.png"))
     (multitexture 1 (load-texture "textures/D111.png"))
-    ;(colour #(.2 0 0))
-    ;(specular (vector 1 1 1))    
-    ;(shader "./shaders/phong_vert.glsl" "shaders/phong_frag.glsl")
     (poly-convert-to-indexed)
     (for ([i (in-range 0 (pdata-size) 1)])
         (let* ([c (pdata-ref "p" i)])
@@ -78,9 +75,6 @@
         (colour #(1 1 1))
         (specular (vector .1 .1 1))    
         (texture (load-texture "textures/colors.png"))
-        ;(translate (vector t2 0 0))
-        (rotate (vector 0 0 1 ))
-        (apply-transform)
         
         (build-icosphere 2))
     )
