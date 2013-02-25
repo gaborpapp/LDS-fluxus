@@ -29,12 +29,12 @@
 (define clip-near .5) ; clip plane distances - change for fov
 (define clip-far 1000)
 
-(define camera-distance 10.) ; distance of camera from the followed object
+(define camera-distance 30.) ; distance of camera from the followed object
 
 ; depth of field parameters
 (define dof-aperture .06) ; smaller value result in shallower blur range
-(define dof-focus .15) ; focus from 0. to 1, 0 is the camera position
-(define dof-maxblur 1.) ; maximum blur
+(define dof-focus .26) ; focus from 0. to 1, 0 is the camera position
+(define dof-maxblur .1) ; maximum blur
 
 (define bloom .3) ; bloom
 

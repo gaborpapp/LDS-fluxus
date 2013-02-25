@@ -50,7 +50,8 @@
         (when (< (abs (- tm (vx (list-ref tracks i)))) 
                 (abs (- tm (vx (list-ref tracks next-track)))))
             (set! next-track i)))
-    (let [(rel-pos (- tm (vx (list-ref tracks next-track))))]
+    (let* ([rel-pos (- tm (vx (list-ref tracks next-track)))]
+		   [gh-scale (* 3 (/ (abs rel-pos) play-timespan))])
         (when (< (abs rel-pos) play-timespan) 
             (with-primitive (list-ref text-prims next-track)
 				(hint-ignore-depth)
@@ -61,9 +62,9 @@
                 (pdata-index-map! (lambda (i p p1) 
                         (let [(p2 (vmix p1 p .95))]
                             (vector
-                                (- (vx p2) (gh (sin (vx p2))))
+                                (- (vx p2) (clamp (gh (sin (vx p2))) 0 gh-scale))
                                 (vy p2)
-                                (- (vz p2) (gh (vx p2))))))
+                                (- (vz p2) (clamp (gh (vx p2)) 0 gh-scale)))))
                     "p" "p1")))))
 
 (define (titles-update)
