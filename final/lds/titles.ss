@@ -54,6 +54,7 @@
         (when (< (abs rel-pos) play-timespan) 
             (with-primitive (list-ref text-prims next-track)
 				(hint-ignore-depth)
+				(hint-unlit)
                 (identity)
                 (translate (vector (- (* -.1 (* rel-pos rel-pos rel-pos)) 25) 0 -20))
                 (rotate (vector -15 (* 5 (sin (flxtime))) 0))
