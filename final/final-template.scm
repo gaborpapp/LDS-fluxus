@@ -36,6 +36,8 @@
 (define dof-focus .15) ; focus from 0. to 1, 0 is the camera position
 (define dof-maxblur 1.) ; maximum blur
 
+(define bloom .3) ; bloom
+
 (define pp-size 1024) ; pixel primitive size for rendering - bigger gives better quality, but slower
 
 (define title-id 0)
@@ -233,7 +235,8 @@
     (with-primitive plane
         (dof render-buffer #:aperture dof-aperture
             #:focus dof-focus
-            #:maxblur dof-maxblur)
+            #:maxblur dof-maxblur
+            #:bloom bloom)
         (titles-update)))
 
 (every-frame (loop))

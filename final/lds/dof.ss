@@ -22,6 +22,8 @@
     uniform float focus;
     uniform vec2 size;
     
+    uniform float bloomStrength;
+
     float zfar = 100.;
     float znear = 1.;
     
@@ -89,17 +91,43 @@
         col += texture2D( tColor, uv + ( vec2( -0.29, -0.29 ) * aspectcorrect ) * dofblur4 );
         col += texture2D( tColor, uv + ( vec2(  0.0,   0.4  ) * aspectcorrect ) * dofblur4 );
         
-        gl_FragColor = col / 41.0;
+        col /= 41.0;
+
+        // bloom
+        vec4 sum = vec4( 0 );
+        for ( int i = -4; i < 4; i++ )
+        {
+            for ( int j = -3; j < 3; j++ )
+            {
+                sum += texture2D( tColor, uv + vec2( j, i ) * 0.004 ) * bloomStrength;
+            }
+        }
+
+        if ( col.r < 0.3 )
+        {
+            gl_FragColor = sum * sum * 0.012 + col;
+        }
+        else
+        if ( col.r < 0.5 )
+        {
+            gl_FragColor = sum * sum * 0.009 + col;
+        }
+        else
+        {
+            gl_FragColor = sum * sum * 0.0075 + col;
+        }
+
         gl_FragColor.a = 1.0;
     }")
 
-(define (dof pprim #:aperture aperture #:focus focus #:maxblur maxblur)
-	(texture-params 0 '(min linear mag linear))
-	(texture-params 1 '(min linear mag linear))
+(define (dof pprim #:aperture aperture #:focus focus #:maxblur maxblur #:bloom bloom)
+    (texture-params 0 '(min linear mag linear))
+    (texture-params 1 '(min linear mag linear))
     (multitexture 0 (pixels->texture pprim))
     (multitexture 1 (pixels->depth pprim))
     (shader-source dof-vert dof-frag)
     (shader-set! #:tColor 0 #:tDepth 1
         #:size (with-primitive pprim (vector (pixels-width) (pixels-height)))
-        #:maxblur maxblur #:aperture aperture #:focus focus))
+        #:maxblur maxblur #:aperture aperture #:focus focus
+        #:bloomStrength bloom))
 
