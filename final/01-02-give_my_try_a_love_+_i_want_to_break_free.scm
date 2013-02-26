@@ -3,19 +3,24 @@
 (require lds/titles)
 (require polyhedra/polyhedra)
 
+(require fluxus-018/fluxus-midi)
+
 ; linux: uncomment these lines and run this script in this directory
 ; to be able to use the modules
 ;(require "lds/dof.ss")
 ;(require "lds/titles.ss")
 ;(require "polyhedra/polyhedra.ss")
 
+(start-audio "" 512 44100)
+(midiin-open 0)
+
 ; parameters to tune
 
 ; tunnel parameters
 (define tunnel-inner-radius 11)
 (define tunnel-outer-radius 27)
-(define tunnel-slices 9)
-(define tunnel-stacks 27)
+(define tunnel-slices 7)
+(define tunnel-stacks 37)
 
 (define tunnel-texture-0 "D77.png")
 (define tunnel-texture-1 "D111.png")
@@ -36,7 +41,7 @@
 (define dof-focus .26) ; focus from 0. to 1, 0 is the camera position
 (define dof-maxblur .1) ; maximum blur
 
-(define bloom .3) ; bloom
+(define bloom .1) ; bloom
 
 (define pp-size 1024) ; pixel primitive size for rendering - bigger gives better quality, but slower
 
@@ -60,6 +65,11 @@
                     octagonal-dipyramid))
 
 ;------------------------------------------------------------------------------
+
+(define tunnel-opacity 1.0)
+(define object-opacity 1.0)
+(define lines-opacity 1.0)
+(define particle-size .1)
 
 (clear)
 
@@ -92,9 +102,6 @@
 
 ;------------------------------------------------------------------------------
 
-; logaritmic gh
-(define (gl n)
-    (log (+ 1 (gh n))))
 
 (define tunnel (with-pixels-renderer render-buffer
         (build-torus tunnel-inner-radius tunnel-outer-radius
@@ -152,7 +159,7 @@
 (with-pixels-renderer render-buffer
     (with-primitive particles
         (pdata-index-map!
-            (λ (i c) (vector 1 .1)) "c")
+            (λ (i c) (vector 1 1)) "c")
         (pdata-index-map!
             (λ (i s) .1) "s")))
 
@@ -170,7 +177,7 @@
 (define (draw-lines)
     (wire-colour (rgb->hsv (vector  (abs (sin (time))) (abs (cos (time))) (rndf) .9)))
     (line-width (* (gl 0) 6))
-
+    (wire-opacity lines-opacity)
     (with-primitive particles
         (for ([i (in-range 0 particle-sum 1)])
             (let ([v0  (pdata-ref "p" i)]
@@ -181,10 +188,18 @@
 (define (render-tunnel)
     (define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 20 (time)) 0))))
     (with-pixels-renderer render-buffer
+        (if (= (midi-cc 0 10) 127)
+            (hint-on 'depth-test)
+            (hint-off 'depth-test))
+
         (set! object-points '())
+
+        (with-primitive tunnel
+            (opacity tunnel-opacity))
 
         (with-primitive object
             (identity)
+            (opacity object-opacity)
             (rotate (vector 0 0 (* (time) tunnel-outer-radius)))
             (translate (vector (+ (cos(time)) tunnel-outer-radius) (* 5 (abs (sin (time)))) (* 5 (sin (time)))))
             (scale (+ (abs (sin (gl 0))) .5))
@@ -202,6 +217,9 @@
 
 
         (with-primitive particles
+            (pdata-index-map!
+                (λ (i s) particle-size) "s")
+
             (for ([i (in-range 0 (length tunnel-points) 1)])
                 (let ([p (list-ref tunnel-points i)])
                     (pdata-set! "p" i p))))
@@ -233,7 +251,17 @@
 (titles-setup (string-append data-folder "/font/chunkfive.ttf"))
 (titles-seek title-id title-appears-in-sec)
 
+(define (midi-update)
+    (set! tunnel-opacity (midi-ccn 0 1))
+    (set! lines-opacity (midi-ccn 0 2))
+    (set! particle-size (midi-ccn 0 3))
+    (set! object-opacity (midi-ccn 0 4))
+    (set! bloom (midi-ccn 0 7))
+    (set! dof-maxblur (midi-ccn 0 8))
+    (set! dof-focus (midi-ccn 0 9)))
+
 (define (loop)
+      (midi-update)
     (render-tunnel)
     (with-primitive plane
         (dof render-buffer #:aperture dof-aperture
