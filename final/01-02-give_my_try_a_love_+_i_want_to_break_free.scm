@@ -46,7 +46,7 @@
 (define pp-size 1024) ; pixel primitive size for rendering - bigger gives better quality, but slower
 
 (define title-id 0)
-(define title-appears-in-sec 10) ; title appears in this seconds after running the script
+(define title-appears-in-sec 15) ; title appears in this seconds after running the script
 
 ;------------------------------------------------------------------------------
 
@@ -202,7 +202,8 @@
             (opacity object-opacity)
             (rotate (vector 0 0 (* (time) tunnel-outer-radius)))
             (translate (vector (+ (cos(time)) tunnel-outer-radius) (* 5 (abs (sin (time)))) (* 5 (sin (time)))))
-            (scale (+ (abs (sin (gl 0))) .5))
+            (scale (+ (* 1 (abs (sin (clamp (* 3 (gh 0)) 0 (/ pi 2))))) .1))
+            (rotate (vector 0 (* 30 (gl 0)) 0))
 
             (for ([i (in-range 0 (pdata-size) 1)])
                 (let ([c (pdata-ref "p" i)])
@@ -217,8 +218,15 @@
 
 
         (with-primitive particles
+            (if (= (midi-cc 0 10) 127)
+                (hint-on 'depth-test)
+                (hint-off 'depth-test))
+
             (pdata-index-map!
                 (λ (i s) particle-size) "s")
+            (pdata-index-map!
+                (λ (i c) (vector i (* .1 (gh i)))) "c")
+
 
             (for ([i (in-range 0 (length tunnel-points) 1)])
                 (let ([p (list-ref tunnel-points i)])
