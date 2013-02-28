@@ -48,7 +48,7 @@
 
 (define pp-size 1024) ; pixel primitive size for rendering - bigger gives better quality, but slower
 
-(define title-id 11)
+(define title-id 8)
 (define title-appears-in-sec 15) ; title appears in this seconds after running the script
 
 ;------------------------------------------------------------------------------
@@ -173,12 +173,14 @@
 (with-primitive glitch-buffer
     (scale 0))
 
+;#|
 (define plugin (ffgl-load "cifourfoldtranslatedtile" glitch-size glitch-size))
 
 (with-ffgl plugin
    (ffgl-process glitch-buffer
                 (pixels->texture glitch-buffer 1)
                 (pixels->texture glitch-buffer 0)))
+;|#
 
 (with-primitive glitch-buffer
     (pixels-render-to (pixels->texture glitch-buffer 0))
@@ -188,8 +190,8 @@
     (gain (/ 1 (+ (gl 0) .1)))
         (with-ffgl plugin
             (ffgl-set-parameter! #:angle (ngl 0)
-                #:center-x .5 ;(/ (mouse-x) (vx (get-screen-size)))
-                #:center-y .5 ;(- 1 (/ (mouse-y) (vy (get-screen-size))))
+                #:center-x (midi-ccn 0 2) ;(/ (mouse-x) (vx (get-screen-size)))
+                #:center-y (midi-ccn 0 3) ;(- 1 (/ (mouse-y) (vy (get-screen-size))))
                 #:width (ngl 5)
                 #:acute-angle 0))
 
@@ -197,7 +199,11 @@
         (clear-colour #(0 0))
             (with-state
                 (scale 5)
-                (colour (vector (random 2) (random 2) (random 2)))
+                (colour
+                    (cond [(positive? (midi-cc 0 10)) #(1 0 0)]
+                          [(positive? (midi-cc 0 11)) #(0 1 0)]
+                          [(positive? (midi-cc 0 12)) #(0 1 1)]
+                          [else #(0 0 0)]))
                 (rotate (vector (* 54.3 (time)) -59 (* -87 (time))))
                 (draw-cube))))
 
@@ -239,6 +245,7 @@
             (scale polyhedron-scale)
             (build-polyhedron (list-ref polyhedra polyhedron-id)))))
 
+#|
 (define starfield
     (with-pixels-renderer render-buffer
         (build-particles 4096)))
@@ -259,6 +266,7 @@
               (λ (s) (rndf)) "s")
         (pdata-map!
               (λ (c) #(1 .15)) "c")))
+|#
 
 (with-pixels-renderer render-buffer
     (with-primitive object
@@ -280,6 +288,7 @@
 (set! all-points (append object-points tunnel-points))
 (set! particle-sum (length all-points))
 
+#|
 (define particles (with-pixels-renderer render-buffer
         (with-state
             (build-particles particle-sum))))
@@ -290,6 +299,7 @@
             (λ (i c) (vector 1 .1)) "c")
         (pdata-index-map!
             (λ (i s) .1) "s")))
+|#
 
 (define (mouse-look)
     (let* ([max tunnel-inner-radius]
@@ -331,13 +341,13 @@
     (update-glitch)
 
     (with-pixels-renderer render-buffer
-        (set! object-points '())
+        #;(set! object-points '())
         
         (with-primitive tunnel
             (colour (vector 1 tunnel-opacity)))
    
         (random-seed 0)
-        (with-primitive starfield
+        #;(with-primitive starfield
             (let ([limit (inexact->exact (floor (* stars-count (pdata-size))))])
                 (pdata-index-map!
                     (λ (i c) (if (< i limit)
@@ -351,14 +361,14 @@
             ;(translate (vector (+ (cos (time)) tunnel-outer-radius) (* 5 (abs (sin (time)))) (* 5 (sin (time)))))
             (rot (* .2 tunnel-outer-radius (time)))
             
-            (pdata-rnd-map!
+            #;(pdata-rnd-map!
                 .01
                 (lambda (p)
                     (vadd p (vmul (crndvec) .01)))
                 "p")
             (recalc-normals 0)
 
-            (for ([i (in-range 0 (pdata-size) 1)])
+            #;(for ([i (in-range 0 (pdata-size) 1)])
                 (let ([c (pdata-ref "p" i)])
                     (set! object-points (cons c object-points)))))
 
@@ -371,7 +381,7 @@
                     "p")))
         
         
-        (with-primitive particles
+        #;(with-primitive particles
             (for ([i (in-range 0 (length tunnel-points) 1)])
                 (let ([p (list-ref tunnel-points i)])
                     (pdata-set! "p" i p))))
@@ -398,7 +408,9 @@
 ; plane for post-processed output
 (define plane (build-plane))
 (with-primitive plane
-    (scale #(21 17 1)))
+    (scale #(21 17 1))
+    (hint-unlit)
+    (texture (pixels->texture render-buffer)))
 
 ; setting up titles
 (titles-setup (string-append data-folder "/font/chunkfive.ttf"))
@@ -419,7 +431,7 @@
     (midi-update)
     (render-tunnel)
     (with-primitive plane
-        (dof render-buffer #:aperture dof-aperture
+        #;(dof render-buffer #:aperture dof-aperture
             #:focus dof-focus
             #:maxblur dof-maxblur
             #:bloom bloom)
