@@ -7,8 +7,4 @@ phong-torus/target-cam-3.scm
 
 camera-look/camera-mozgatas.scm
 
-<<<<<<< HEAD
 final/final-template-mod-dof.scm
-=======
-camera-look/final.scm
->>>>>>> nothing
