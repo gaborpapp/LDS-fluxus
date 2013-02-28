@@ -219,7 +219,9 @@
 ; plane for post-processed output
 (define plane (build-plane))
 (with-primitive plane
-    (scale #(21 17 1)))
+    (scale #(21 17 1))
+    (hint-unlit)
+    (texture (pixels->texture render-buffer)))
 
 ; setting up titles
 (titles-setup (string-append data-folder "/font/chunkfive.ttf"))
@@ -227,7 +229,7 @@
 
 (define (loop)
     (render-tunnel)
-	(titles-update))
+    (titles-update))
 
 (every-frame (loop))
 
