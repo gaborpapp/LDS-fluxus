@@ -9,6 +9,12 @@
 ;(require "lds/titles.ss")
 ;(require "polyhedra/polyhedra.ss")
 
+(require fluxus-018/fluxus-midi)
+(start-audio "mplayer:out1" 512 44100)
+(midiin-open 0)
+
+(set-screen-size #(1280 720))
+
 ; parameters to tune
 
 ; tunnel parameters
@@ -23,8 +29,8 @@
 (define data-folder "data") ; for textures and title font
 
 (define polyhedron-id 0) ; polyhedra index from the polyhedra list below
-(define polyhedron-scale 3.0)
-(define polyhedron-envmap "colors.png")
+(define polyhedron-scale 5.0)
+(define polyhedron-envmap "transp.png")
 
 (define clip-near .5) ; clip plane distances - change for fov
 (define clip-far 1000)
@@ -34,9 +40,9 @@
 ; depth of field parameters
 (define dof-aperture .06) ; smaller value result in shallower blur range
 (define dof-focus .26) ; focus from 0. to 1, 0 is the camera position
-(define dof-maxblur .1) ; maximum blur
+(define dof-maxblur .0) ; maximum blur
 
-(define bloom .2) ; bloom
+(define bloom .3) ; bloom
 
 (define pp-size 1024) ; pixel primitive size for rendering - bigger gives better quality, but slower
 
@@ -46,18 +52,27 @@
 ;------------------------------------------------------------------------------
 
 ; list of polyhedron to choose from
-(define polyhedra '(medial-disdyakistriacontahedron
-                    great-dodecahemidodecahedron
-                    great-icosihemidodecahedron
-                    great-stellated-truncated-dodecahedron
-                    zonohedron-7-random
-                    tetradyakishexahedron
-                    stellated-icosahedron-5
-                    cubitruncated-cuboctahedron
-                    disdyakisdodecahedron
-                    great-cubicuboctahedron
-                    j86
-                    octagonal-dipyramid))
+(define polyhedra '(medial-hexagonal-hexecontahedron
+        great-dodecahemidodecahedron
+        great-icosihemidodecahedron
+        great-stellated-truncated-dodecahedron
+        zonohedron-7-random
+        tetradyakishexahedron
+        stellated-icosahedron-5
+        cubitruncated-cuboctahedron
+        disdyakisdodecahedron
+        great-cubicuboctahedron
+        j86
+        octagonal-dipyramid))
+
+;------------------------------------------------------------------------------
+
+(define tunnel-opacity 1.0)
+(define tunnel-normal-opacity 1.0)
+(define tunnel-destroy .0)
+(define object-opacity 1.0)
+(define stars-opacity 1.0)
+(define stars-count 1.0)
 
 ;------------------------------------------------------------------------------
 
@@ -98,17 +113,18 @@
 
 ; normalized logarithmic gh
 (define ngl
-    (let* ([gl-limits (make-vector (get-num-frequency-bins) (vector 1000. 0))]
-           [max-count 10000]
-           [counter max-count])
+    (let* ([bin-count (max 1 (get-num-frequency-bins))]
+            [gl-limits (make-vector bin-count (vector 1000. 0))]
+            [max-count 10000]
+            [counter max-count])
         (lambda (i)
             (when (zero? counter)
-                (set! gl-limits (make-vector (get-num-frequency-bins) (vector 1000. 0)))
+                (set! gl-limits (make-vector bin-count (vector 1000. 0)))
                 (set! counter max-count))
             (set! counter (- counter 1))
-            (let* ([j (remainder i (get-num-frequency-bins))]
-                   [v (gl j)]
-                   [limits (vector-ref gl-limits j)])
+            (let* ([j (remainder i bin-count)]
+                    [v (gl j)]
+                    [limits (vector-ref gl-limits j)])
                 (when (< v (vx limits))
                     (vector-set! gl-limits j (vector v (vy limits))))
                 (when (> v (vy limits))
@@ -152,20 +168,73 @@
 
 ; object being followed
 (define object (with-pixels-renderer render-buffer
-        (build-polyhedron (list-ref polyhedra polyhedron-id))))
+        (with-state
+            (hint-sphere-map)
+            ;(backfacecull 0)
+            ;(texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
+            (texture (load-texture polyhedron-envmap))
+            ;(hint-wire)
+            ;(hint-ignore-depth)
+            (colour #(1 1))
+            (scale polyhedron-scale)
+            (build-polyhedron (list-ref polyhedra polyhedron-id)))))
+
+(define starfield
+    (with-pixels-renderer render-buffer
+        (build-particles 4096)))
+
+(with-pixels-renderer render-buffer
+    (with-primitive starfield
+        (hint-ignore-depth)
+        (texture (load-texture "splat.png"))
+        (pdata-map!
+              (lambda (p)
+                  (vtransform
+                    (vmul (srndvec) tunnel-inner-radius)
+                    (mmul
+                        (mrotate (vector 0 0 (* (rndf) 360)))
+                        (mtranslate (vector tunnel-outer-radius 0 0)))))
+                "p")
+        (pdata-map!
+              (λ (s) (rndf)) "s")
+        (pdata-map!
+              (λ (c) #(1 .15)) "c")))
+
+#;(with-pixels-renderer render-buffer
+    (with-state
+        (identity)
+        (backfacecull 0)
+        (hint-none)
+        (hint-wire)
+        (hint-ignore-depth)
+        (wire-colour #(1 .2))
+        (line-width 3)
+        (hint-anti-alias)
+        (for ([i (in-range 32)])
+            (with-state
+                (identity)
+                (translate (vmul (srndvec) tunnel-inner-radius))
+                (rotate (vector 0 0 (* (rndf) 360)))
+                (translate (vector tunnel-outer-radius 0 0))
+                (scale (+ .5 (* 1.5 (rndf))))
+                (build-polyhedron (string->symbol (string-append "j" (number->string (add1 (random 92))))))))))
 
 (with-pixels-renderer render-buffer
     (with-primitive object
-        (hint-sphere-map)
-        (colour #(1 1 1))
-        (specular (vector .1 .1 1))
-        (texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
-        (recalc-normals 0)
-        (scale polyhedron-scale)
-        (apply-transform)
-        (for ([i (in-range 0 (pdata-size) 1)])
-            (let ([c (pdata-ref "p" i)])
-                (set! object-points (cons c object-points))))))
+        ;(hint-sphere-map)
+        ;(hint-none)
+        ;(hint-solid)
+        ;(hint-unlit)
+        ;(colour #(1 1 1))
+        ;(line-width 10)
+        ;(specular (vector .1 .1 1))
+        ;texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
+    ;(recalc-normals 0)
+    ;(scale polyhedron-scale)
+    (apply-transform)
+    (for ([i (in-range 0 (pdata-size) 1)])
+        (let ([c (pdata-ref "p" i)])
+            (set! object-points (cons c object-points))))))
 
 (set! all-points (append object-points tunnel-points))
 (set! particle-sum (length all-points))
@@ -195,61 +264,95 @@
 (define (draw-lines)
     (wire-colour (rgb->hsv (vector  (abs (sin (time))) (abs (cos (time))) (rndf) .9)))
     (line-width (* (gl 0) 6))
-
+    
     (with-primitive particles
         (for ([i (in-range 0 particle-sum 1)])
             (let ([v0  (pdata-ref "p" i)]
                     [v1 (pdata-op "closest" "p" i)])
                 (draw-line v0 v1)))))
 
+(define-syntax pdata-rnd-map!
+  (syntax-rules ()
+    ((_ probability proc pdata-write-name pdata-read-name ...)
+     (letrec
+         ((loop (lambda (n total)
+                  (cond ((not (> n total))
+                         (when (< (rndf) probability)
+                             (pdata-set! pdata-write-name n
+                                         (proc (pdata-ref pdata-write-name n)
+                                               (pdata-ref pdata-read-name n) ...)))
+                         (loop (+ n 1) total))))))
+       (loop 0 (- (pdata-size) 1))))))
 
 (define (render-tunnel)
     (define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 20 (time)) 0))))
     (with-pixels-renderer render-buffer
         (set! object-points '())
-
+        
         (with-primitive tunnel
-             (pdata-index-map! (λ (i c) (vector 1 (ngl i))) "c"))
+            (hint-ignore-depth)
+            (normal-colour (vector 0 1 0 tunnel-normal-opacity))
+            (pdata-rnd-map!
+                .3
+                (lambda (p)
+                    (vadd p (vmul (crndvec) tunnel-destroy)))
+                "p")
 
+            (pdata-index-map! (λ (i c) (vector 1 (* tunnel-opacity (ngl i)))) "c"))
+   
+        (with-primitive starfield
+            (let ([limit (inexact->exact (floor (* stars-count (pdata-size))))])
+                (pdata-index-map!
+                    (λ (i c) (vector 1 (if (< i limit) stars-opacity .0))) "c")))
+     
         (with-primitive object
+            (opacity object-opacity)
             (identity)
             (rotate (vector 0 0 (* (time) tunnel-outer-radius)))
             (translate (vector (+ (cos(time)) tunnel-outer-radius) (* 5 (abs (sin (time)))) (* 5 (sin (time)))))
-            (scale (+ (abs (sin (gl 0))) .5))
+            (scale (+ (* .3 (ngl 0)) .5))
+            
+            (pdata-rnd-map!
+                .01
+                (lambda (p)
+                    (vadd p (vmul (crndvec) .01)))
+                "p")
+            (recalc-normals 0)
 
             (for ([i (in-range 0 (pdata-size) 1)])
                 (let ([c (pdata-ref "p" i)])
                     (set! object-points (cons c object-points)))))
 
-        (let ([m (with-primitive object (get-global-transform))])
+        
+        #;(let ([m (with-primitive object (get-global-transform))])
             (with-primitive particles
                 (pdata-index-map!
                     (λ (i p)
                         (vtransform (with-primitive object (pdata-ref "p" i)) m))
                     "p")))
-
-
+        
+        
         (with-primitive particles
             (for ([i (in-range 0 (length tunnel-points) 1)])
                 (let ([p (list-ref tunnel-points i)])
                     (pdata-set! "p" i p))))
-
-        (draw-lines)
-
+        
+        ;(draw-lines)
+        
         (with-primitive camera-target
             (identity)
             (hint-origin)
             (hide 1)
             (rot (* tunnel-outer-radius (time)))
             (when (mouse-button 2) (mouse-look)))
-
+        
         (with-primitive camera-eye
             (identity)
             (rot (- (* tunnel-outer-radius (time)) camera-distance)))
-
+        
         (set-target-camera (with-primitive camera-eye (get-pos))
-                           (with-primitive camera-target (get-pos))
-                           up)))
+            (with-primitive camera-target (get-pos))
+            up)))
 
 
 ; plane for post-processed output
@@ -261,7 +364,19 @@
 (titles-setup (string-append data-folder "/font/chunkfive.ttf"))
 (titles-seek title-id title-appears-in-sec)
 
+(define (midi-update)
+    (set! tunnel-opacity (midi-ccn 0 1))
+    (set! tunnel-normal-opacity (midi-ccn 0 2))
+    (set! object-opacity (midi-ccn 0 3))
+    (set! stars-opacity (midi-ccn 0 4))
+    (set! stars-count (midi-ccn 0 5))
+    (set! tunnel-destroy (midi-ccn 0 6))
+    (set! bloom (midi-ccn 0 7))
+    (set! dof-maxblur (midi-ccn 0 8))
+    (set! dof-focus (midi-ccn 0 9)))
+
 (define (loop)
+    (midi-update)
     (render-tunnel)
     (with-primitive plane
         (dof render-buffer #:aperture dof-aperture
