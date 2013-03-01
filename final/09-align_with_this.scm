@@ -22,8 +22,8 @@
 ; tunnel parameters
 (define tunnel-inner-radius 11)
 (define tunnel-outer-radius 27)
-(define tunnel-slices 30)
-(define tunnel-stacks 27)
+(define tunnel-slices 18)
+(define tunnel-stacks 42)
 
 (define tunnel-texture-0 "D77.png")
 (define tunnel-texture-1 "D111.png")
@@ -33,11 +33,14 @@
 (define polyhedron-id 0) ; polyhedra index from the polyhedra list below
 (define polyhedron-scale 3.0)
 (define polyhedron-envmap "transp.png")
+(define polyhedron-envmap2 "colors.png")
+
 
 (define clip-near .5) ; clip plane distances - change for fov
 (define clip-far 1000)
 
 (define camera-distance 40.) ; distance of camera from the followed object
+(define speed 1)
 
 ; depth of field parameters
 (define dof-aperture .06) ; smaller value result in shallower blur range
@@ -70,35 +73,14 @@
 ;------------------------------------------------------------------------------
 
 (define tunnel-opacity 1.0)
-(define stripe-seed 0)
-(define stripe-width 0.0)
+(define tunnel-destroy .0)
+(define glitch-x 0.0)
+(define glitch-y 0.0)
 (define object-opacity 1.0)
-(define stars-opacity 1.0)
-(define stars-count 1.0)
+(define object-rotation-scale 0)
+(define fov-mult .5)
 
 ;------------------------------------------------------------------------------
-
-(define (hex2rgb str)
-  (define (h2n h)
-    (/ (string->number (string-append "#x" h) 16) 255.0))
-  (cond ((= 9 (string-length str))
-         (let ((a (substring str 1 3))
-               (r (substring str 3 5))
-               (g (substring str 5 7))
-               (b (substring str 7 9)))
-           (vector (h2n r) (h2n g) (h2n b) (h2n a))))
-        ((= 7 (string-length str))
-         (let ((r (substring str 1 3))
-               (g (substring str 3 5))
-               (b (substring str 5 7)))
-           (vector (h2n r) (h2n g) (h2n b))))))
-
-
-(define palette
-    (map
-        hex2rgb
-        (list "#ff113F8C" "#ff01A4A4" "#ff00A1CB" "#ff61AE24" "#ffD0D102"
-              "#ff32742C" "#ffD70060" "#ffE54028" "#ffF18D05")))
 
 (clear)
 
@@ -139,7 +121,7 @@
 (define ngl
     (let* ([bin-count (max 1 (get-num-frequency-bins))]
             [gl-limits (make-vector bin-count (vector 1000. 0))]
-            [max-count 10000]
+            [max-count 1000]
             [counter max-count])
         (lambda (i)
             (when (zero? counter)
@@ -160,12 +142,6 @@
         (build-torus tunnel-inner-radius tunnel-outer-radius
             tunnel-slices tunnel-stacks)))
 
-; lists for particles and connector lines
-(define object-points '())
-(define tunnel-points '())
-(define all-points '())
-(define particle-sum 0)
-
 (define glitch-size 32)
 (define glitch-buffer (build-pixels glitch-size glitch-size #t 2))
 (define glitch-texture (pixels->texture glitch-buffer 1))
@@ -173,14 +149,12 @@
 (with-primitive glitch-buffer
     (scale 0))
 
-;#|
 (define plugin (ffgl-load "cifourfoldtranslatedtile" glitch-size glitch-size))
 
 (with-ffgl plugin
    (ffgl-process glitch-buffer
                 (pixels->texture glitch-buffer 1)
                 (pixels->texture glitch-buffer 0)))
-;|#
 
 (with-primitive glitch-buffer
     (pixels-render-to (pixels->texture glitch-buffer 0))
@@ -190,8 +164,8 @@
     (gain (/ 1 (+ (gl 0) .1)))
         (with-ffgl plugin
             (ffgl-set-parameter! #:angle (ngl 0)
-                #:center-x (midi-ccn 0 2) ;(/ (mouse-x) (vx (get-screen-size)))
-                #:center-y (midi-ccn 0 3) ;(- 1 (/ (mouse-y) (vy (get-screen-size))))
+                #:center-x glitch-x 
+                #:center-y glitch-y
                 #:width (ngl 5)
                 #:acute-angle 0))
 
@@ -200,10 +174,9 @@
             (with-state
                 (scale 5)
                 (colour
-                    (cond [(positive? (midi-cc 0 10)) #(1 0 0)]
-                          [(positive? (midi-cc 0 11)) #(0 1 0)]
-                          [(positive? (midi-cc 0 12)) #(0 1 1)]
-                          [else #(0 0 0)]))
+                    (vector (if (positive? (midi-cc 0 10)) 1 0)
+                            (if (positive? (midi-cc 0 11)) 1 0)
+                            (if (positive? (midi-cc 0 12)) 1 0)))
                 (rotate (vector (* 54.3 (time)) -59 (* -87 (time))))
                 (draw-cube))))
 
@@ -212,115 +185,54 @@
     (clip clip-near clip-far)
     (with-primitive tunnel
         (backfacecull 0)
-        ;(hint-depth-sort)
+        (hint-depth-sort)
         ;(hint-ignore-depth)
         ;(recalc-normals 0)
+        (shader "phong_vert.glsl" "phong_frag.glsl")
+        (shader-set! #:tex 0)
+
         (hint-solid)
+        (recalc-normals 0)
         (pdata-map! (λ (n) (vmul n -1)) "n")
 
         (pdata-map! (λ (t) (vector (* 5 (vx t)) (* 15 (vy t)) (vz t))) "t")
-
-        (texture glitch-texture)
-        (texture-params 0 '(min nearest mag nearest wrap-s repeat wrap-t repeat))
         
-        (for ([i (in-range 0 (pdata-size) 1)])
-            (let* ([c (pdata-ref "p" i)])
-                (set! tunnel-points (cons c tunnel-points))))))
+        (shinyness 1.)
+        (ambient .05)
+        (texture glitch-texture)
+        (texture-params 0 '(min nearest mag nearest wrap-s repeat wrap-t repeat))))    
 
 ; camera following the object
 (define camera-eye (with-pixels-renderer render-buffer (build-locator)))
 (define camera-target (with-pixels-renderer render-buffer
         (build-locator)))
 
-; object being followed
-(define object (with-pixels-renderer render-buffer
+(define objects (with-pixels-renderer render-buffer
         (with-state
+            (hide 1)
             (hint-sphere-map)
-            ;(backfacecull 0)
+            (backfacecull 0)
             ;(texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
-            (texture (load-texture polyhedron-envmap))
-            ;(hint-wire)
-            ;(hint-ignore-depth)
+            (multitexture 0 (load-texture polyhedron-envmap))
             (colour #(1 1))
             (scale polyhedron-scale)
-            (build-polyhedron (list-ref polyhedra polyhedron-id)))))
-
-#|
-(define starfield
-    (with-pixels-renderer render-buffer
-        (build-particles 4096)))
+            (map build-polyhedron polyhedra))))
 
 (with-pixels-renderer render-buffer
-    (with-primitive starfield
-        (hint-ignore-depth)
-        (texture (load-texture "splat.png"))
-        (pdata-map!
-              (lambda (p)
-                  (vtransform
-                    (vmul (srndvec) tunnel-inner-radius)
-                    (mmul
-                        (mrotate (vector 0 0 (* (rndf) 360)))
-                        (mtranslate (vector tunnel-outer-radius 0 0)))))
-                "p")
-        (pdata-map!
-              (λ (s) (rndf)) "s")
-        (pdata-map!
-              (λ (c) #(1 .15)) "c")))
-|#
+    (for-each
+      (λ (o)
+        (with-primitive o
+            (apply-transform)))
+      objects))
 
-(with-pixels-renderer render-buffer
-    (with-primitive object
-        ;(hint-sphere-map)
-        ;(hint-none)
-        ;(hint-solid)
-        ;(hint-unlit)
-        ;(colour #(1 1 1))
-        ;(line-width 10)
-        ;(specular (vector .1 .1 1))
-        ;texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
-    ;(recalc-normals 0)
-    ;(scale polyhedron-scale)
-    (apply-transform)
-    (for ([i (in-range 0 (pdata-size) 1)])
-        (let ([c (pdata-ref "p" i)])
-            (set! object-points (cons c object-points))))))
+(define current-object-id 0)
 
-(set! all-points (append object-points tunnel-points))
-(set! particle-sum (length all-points))
-
-#|
-(define particles (with-pixels-renderer render-buffer
-        (with-state
-            (build-particles particle-sum))))
-
-(with-pixels-renderer render-buffer
-    (with-primitive particles
-        (pdata-index-map!
-            (λ (i c) (vector 1 .1)) "c")
-        (pdata-index-map!
-            (λ (i s) .1) "s")))
-|#
-
-(define (mouse-look)
-    (let* ([max tunnel-inner-radius]
-            [min (- tunnel-inner-radius)]
-            [x (+ (/ (* (mouse-x) (- max min)) (vx (get-screen-size))) min)]
-            [y (+ (/ (* (mouse-y) (- max min)) (vy (get-screen-size))) min)])
-        (translate (vector x 0 (- y)))))
+; object being followed
+(define object (list-ref objects current-object-id))
 
 (define (rot t)
     (rotate (vector 0 0 t))
     (translate (vector tunnel-outer-radius 0 0)))
-
-(define (draw-lines)
-    (wire-colour (rgb->hsv (vector  (abs (sin (time))) (abs (cos (time))) (rndf) .9)))
-    (line-width (* (gl 0) 6))
-    
-    (with-primitive particles
-        (for ([i (in-range 0 particle-sum 1)])
-            (let ([v0  (pdata-ref "p" i)]
-                    [v1 (pdata-op "closest" "p" i)])
-                (draw-line v0 v1)))))
 
 (define-syntax pdata-rnd-map!
   (syntax-rules ()
@@ -338,66 +250,58 @@
 (define (render-tunnel)
     (define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 10 (time)) 0))))
 
+    (when (positive? (midi-cc 0 18))
+      (set! current-object-id (remainder (+ 1 current-object-id) (length objects)))
+      (set! object (list-ref objects current-object-id)))
+
     (update-glitch)
 
     (with-pixels-renderer render-buffer
-        #;(set! object-points '())
-        
+        (clip (* clip-near (+ .1 (* 1 fov-mult))) clip-far)
+        (blur (if (positive? (midi-cc 0 16)) .03 0))
         (with-primitive tunnel
-            (colour (vector 1 tunnel-opacity)))
+            (shader-set! #:opacity tunnel-opacity)
+            (if (positive? (midi-cc 0 13))
+                (texture-params 0 '(wrap-s repeat wrap-t repeat))
+                (texture-params 0 '(wrap-s clamp wrap-t clamp)))
+
+            (pdata-rnd-map!
+                tunnel-destroy
+                (lambda (p)
+                    (vadd p (vmul (crndvec) .02)))
+                "p"))
    
-        (random-seed 0)
-        #;(with-primitive starfield
-            (let ([limit (inexact->exact (floor (* stars-count (pdata-size))))])
-                (pdata-index-map!
-                    (λ (i c) (if (< i limit)
-                                 (vmul (list-ref palette (random (length palette))) stars-opacity)
-                                 #(1 .0))) "c")))
-     
+        (if (positive? (midi-cc 0 17)) ; show all
+            (for-each (λ (o) (with-primitive o
+                                   (hide 0)))
+                      objects)
+            (for ([i (in-range (length objects))]
+                  [o objects])
+                (with-primitive o
+                    (identity)
+                    (rot (* speed tunnel-outer-radius (time)))
+                    (hide (if (= i current-object-id)
+                            0
+                            1)))))
+              
         (with-primitive object
             (opacity object-opacity)
             (identity)
-            ;(rotate (vector 0 0 (* (time) tunnel-outer-radius)))
-            ;(translate (vector (+ (cos (time)) tunnel-outer-radius) (* 5 (abs (sin (time)))) (* 5 (sin (time)))))
-            (rot (* .2 tunnel-outer-radius (time)))
-            
-            #;(pdata-rnd-map!
-                .01
-                (lambda (p)
-                    (vadd p (vmul (crndvec) .01)))
-                "p")
-            (recalc-normals 0)
+            (rot (* speed tunnel-outer-radius (time)))
+            (scale (+ (* 1. (abs (sin (clamp (ngl 0) 0 (/ pi 2))))) 1))
+            (rotate (vector 0 (* object-rotation-scale (gl 0)) 0)))
 
-            #;(for ([i (in-range 0 (pdata-size) 1)])
-                (let ([c (pdata-ref "p" i)])
-                    (set! object-points (cons c object-points)))))
+        (light-position 0 (with-primitive object (get-pos)))
 
-        
-        #;(let ([m (with-primitive object (get-global-transform))])
-            (with-primitive particles
-                (pdata-index-map!
-                    (λ (i p)
-                        (vtransform (with-primitive object (pdata-ref "p" i)) m))
-                    "p")))
-        
-        
-        #;(with-primitive particles
-            (for ([i (in-range 0 (length tunnel-points) 1)])
-                (let ([p (list-ref tunnel-points i)])
-                    (pdata-set! "p" i p))))
-        
-        ;(draw-lines)
-        
         (with-primitive camera-target
             (identity)
             (hint-origin)
             (hide 1)
-            (rot (* .2 tunnel-outer-radius (time)))
-            (when (mouse-button 2) (mouse-look)))
+            (rot (* speed tunnel-outer-radius (time))))
         
         (with-primitive camera-eye
             (identity)
-            (rot (- (* .2 tunnel-outer-radius (time))
+            (rot (- (* speed tunnel-outer-radius (time))
                     (+ (* 9.2342 (sin (* .6435 (time))) (cos (* .9923 (time)))) camera-distance))))
         
         (set-target-camera (with-primitive camera-eye (get-pos))
@@ -418,23 +322,17 @@
 
 (define (midi-update)
     (set! tunnel-opacity (midi-ccn 0 1))
-    (set! stripe-seed (midi-cc 0 2))
-    (set! stripe-width (midi-ccn 0 3))
-    (set! stars-opacity (midi-ccn 0 4))
-    (set! stars-count (midi-ccn 0 5))
+    (set! tunnel-destroy (midi-ccn 0 2))
+    (set! glitch-x (midi-ccn 0 3))
+    (set! glitch-y (midi-ccn 0 4))
     (set! object-opacity (midi-ccn 0 6))
-    (set! bloom (midi-ccn 0 7))
-    (set! dof-maxblur (midi-ccn 0 8))
-    (set! dof-focus (midi-ccn 0 9)))
+    (set! object-rotation-scale (midi-cc 0 9))
+    (set! fov-mult (midi-ccn 0 8)))
 
 (define (loop)
     (midi-update)
     (render-tunnel)
     (with-primitive plane
-        #;(dof render-buffer #:aperture dof-aperture
-            #:focus dof-focus
-            #:maxblur dof-maxblur
-            #:bloom bloom)
         (titles-update)))
 
 (every-frame (loop))

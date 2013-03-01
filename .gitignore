@@ -3,8 +3,6 @@
 
 phong-torus/target-cam-3.scm
 
-*.glsl
-
 camera-look/camera-mozgatas.scm
 
 final/final-template-mod-dof.scm
