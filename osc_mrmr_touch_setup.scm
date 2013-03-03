@@ -1,10 +1,7 @@
 (clear)
-;osc setup iOS mrmr apphoz  - osx-en kell egy server
-;én az OSCulator-t használom, néha sír h regisztráljak de megy.
+;osc setup iOS mrmr apphoz  
 ;mrmr-en belül a performance.mmr default setupra működik ez
 ;mrmr/prefs/player név Gas
-
-(osc-source "1337")
 
 
 ;BANK1 buttons/switches (a nagy + legalso utolsoelottisor button és legalso switchek csak)
@@ -36,67 +33,132 @@
 (define tactile4 (vector 0 0 0))
 
 ;BANK4 3d -(2 ujjal!)
-(define tactile3d (vector 0 0 0))
-(define accelero (vector 0 0 0))
+(define tac3d (vector 0 0 0))
+(define acc (vector 0 0 0))
+
+(define (osc-drain path [value #f])
+    (if (osc-msg path)
+        (osc-drain path (osc 0))
+        value))
+
+
 
 
 (define (osc_recieve)
     
-    (displayln s4)
-    
-    (when (osc-msg "/mrmr pushbutton 1 Gas")
-        (set! bn (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 13 Gas")
-        (set! b1 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 14 Gas")
-        (set! b2 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 15 Gas")
-        (set! b3 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 16 Gas")
-        (set! b4 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 17 Gas")
-        (set! s1 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 18 Gas")
-        (set! s2 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 19 Gas")
-        (set! s3 (osc 0)))
-    (when (osc-msg "/mrmr pushbutton 20 Gas")
-        (set! s4 (osc 0)))
-
-
-    (when (osc-msg "/mrmr slider horizontal 21 Gas")
-        (set! slide1 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 22 Gas")
-        (set! slide2 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 23 Gas")
-        (set! slide3 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 24 Gas")
-        (set! slide4 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 25 Gas")
-        (set! slide5 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 26 Gas")
-        (set! slide6 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 27 Gas")
-        (set! slide7 (osc 0)))
-    (when (osc-msg "/mrmr slider horizontal 28 Gas")
-        (set! slide8 (osc 0)))
-    
-    (when (osc-msg "/mrmr tactilezone 29 Gas")
-        (set! tactile1 (vector (osc 0) (osc 1) 0)))
-    (when (osc-msg "/mrmr tactilezone 30 Gas")
-        (set! tactile2 (vector (osc 0) (osc 1) 0)))
-    (when (osc-msg "/mrmr tactilezone 31 Gas")
-        (set! tactile3 (vector (osc 0) (osc 1) 0)))
-    (when (osc-msg "/mrmr tactilezone 32 Gas")
-        (set! tactile4 (vector (osc 0) (osc 1) 0)))
-    
-    (when (osc-msg "/mrmr accelerometer 33 Gas")
-        (set! accelero (vector (osc 0) (osc 1) (osc 2))))
-    (when (osc-msg "/mrmr tactile3D 34 Gas")
-        (set! tactile3d (vector (osc 0) (osc 1) (osc 2))))
+    (let ([cbn (osc-drain "/mrmr/pushbutton/1/Gas")])
+        (when cbn
+            (set! bn cbn)))
+    (let ([cb1 (osc-drain "/mrmr/pushbutton/13/Gas")])
+        (when cb1
+            (set! b1 cb1)))
+    (let ([cb2 (osc-drain "/mrmr/pushbutton/14/Gas")])
+        (when cb2
+            (set! b2 cb2)))
+    (let ([cb3 (osc-drain "/mrmr/pushbutton/15/Gas")])
+        (when cb3
+            (set! b3 cb3)))
+    (let ([cb4 (osc-drain "/mrmr/pushbutton/16/Gas")])
+        (when cb4
+            (set! b4 cb4)))
+    (let ([cs1 (osc-drain "/mrmr/pushbutton/17/Gas")])
+        (when cs1
+            (set! s1 cs1)))
+    (let ([cs2 (osc-drain "/mrmr/pushbutton/18/Gas")])
+        (when cs2
+            (set! s2 cs2)))
+    (let ([cs3 (osc-drain "/mrmr/pushbutton/19/Gas")])
+        (when cs3
+            (set! s3 cs3)))
+    (let ([cs4 (osc-drain "/mrmr/pushbutton/20/Gas")])
+        (when cs4
+            (set! s4 cs4)))    
     
     
+    (let ([sl1 (osc-drain "/mrmr/slider/horizontal/21/Gas")])
+        (when sl1
+            (set! slide1 sl1)
+            ))  
+    (let ([sl2 (osc-drain "/mrmr/slider/horizontal/22/Gas")])
+        (when sl2
+            (set! slide2 sl2)
+            ))  
+    (let ([sl3 (osc-drain "/mrmr/slider/horizontal/23/Gas")])
+        (when sl3
+            (set! slide3 sl3)
+            ))  
+    (let ([sl4 (osc-drain "/mrmr/slider/horizontal/24/Gas")])
+        (when sl4
+            (set! slide4 sl4)
+            ))  
+    (let ([sl5 (osc-drain "/mrmr/slider/horizontal/25/Gas")])
+        (when sl5
+            (set! slide5 sl5)))  
+    (let ([sl6 (osc-drain "/mrmr/slider/horizontal/26/Gas")])
+        (when sl6
+            (set! slide6 sl6)))  
+    (let ([sl7 (osc-drain "/mrmr/slider/horizontal/27/Gas")])
+        (when sl7
+            (set! slide7 sl7)))  
+    (let ([sl8 (osc-drain "/mrmr/slider/horizontal/28/Gas")])
+        (when sl8
+            (set! slide8 sl8)))  
     
+    (let*  ([tac1x (osc-drain "/mrmr/tactilezoneX/29/Gas")]
+            [tac1y (osc-drain "/mrmr/tactilezoneY/29/Gas")])
+        (when tac1x 
+            (vector-set! tactile1 0 tac1x))
+        (when tac1y 
+            (vector-set! tactile1 1 tac1y))
+        )  
+    (let*  ([tac2x (osc-drain "/mrmr/tactilezoneX/30/Gas")]
+            [tac2y (osc-drain "/mrmr/tactilezoneY/30/Gas")])
+        (when tac2x 
+            (vector-set! tactile2 0 tac2x))
+        (when tac2y
+            (vector-set! tactile2 1 tac2y))
+        )  
+    (let*  ([tac3x (osc-drain "/mrmr/tactilezoneX/31/Gas")]
+            [tac3y (osc-drain "/mrmr/tactilezoneY/31/Gas")])
+        (when tac3x 
+            (vector-set! tactile3 0 tac3x))
+        (when tac3y 
+            (vector-set! tactile3 1 tac3y))
+        )  
+    (let*  ([tac4x (osc-drain "/mrmr/tactilezoneX/32/Gas")]
+            [tac4y (osc-drain "/mrmr/tactilezoneY/32/Gas")])
+        (when tac4x 
+            (vector-set! tactile4 0 tac4x))
+        (when tac4y
+            (vector-set! tactile4 1 tac4y))
+        )  
+    
+    
+    (let*  ([accelx (osc-drain "/mrmr/accelerometerX/33/Gas")]
+            [accely (osc-drain "/mrmr/accelerometerY/33/Gas")]
+            [accelz (osc-drain "/mrmr/accelerometerZ/33/Gas")]
+            )
+        (when accelx
+            (vector-set! acc 0 accelx))
+        (when accely
+            (vector-set! acc 1 accely))
+        (when accelz
+            (vector-set! acc 2 accelz))
+        )  
+    
+    (let*  ([tac3dx (osc-drain "/mrmr/tactile3DX/34/Gas")]
+            [tac3dy (osc-drain "/mrmr/tactile3DY/34/Gas")]
+            [tac3dz (osc-drain "/mrmr/tactile3DZ/34/Gas")]
+            )
+        (when tac3dx
+            (vector-set! tac3d 0 tac3dx))
+        (when tac3dy
+            (vector-set! tac3d 1 tac3dy))
+        (when tac3dz
+            (vector-set! tac3d 2 tac3dz))
+        )
     )
+
+(osc-source "1337")
 
 (every-frame (osc_recieve))
