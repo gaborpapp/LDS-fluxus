@@ -25,7 +25,7 @@
 (define slide3 0)
 (define slide4 0)
 (define slide5 0)
-(define slide6 0)
+(define slide6 0.001)
 (define slide7 0)
 (define slide8 0)
 
@@ -38,6 +38,8 @@
 ;BANK4 3d -(2 ujjal!)
 (define tac3d (vector 0 0 0))
 (define acc (vector 0 0 0))
+(gain .4)
+
 
 (define (osc-drain path [value #f])
     (if (osc-msg path)
@@ -160,6 +162,10 @@
         )
     )
 
+(define wireopacity 0)
+(define solid-opacity 0)
+(define point-scale 0)
+(define point-colour 0)
 
 ; linux: uncomment these lines and run this script in this directory
 ; to be able to use the modules
@@ -172,18 +178,18 @@
 ; tunnel parameters
 (define tunnel-inner-radius 11)
 (define tunnel-outer-radius 27)
-(define tunnel-slices 11)
-(define tunnel-stacks 27)
-(define tunnel-texture-0 "D77.png")
+(define tunnel-slices 8)
+(define tunnel-stacks 16)
+(define tunnel-texture-0 "d111.png")
 (define tunnel-texture-1 "D111.png")
 
 (define data-folder "data") ; for textures and title font
 
 (define polyhedron-id 9) ; polyhedra index from the polyhedra list below
 (define polyhedron-scale 3.0)
-(define polyhedron-envmap "colors.png")
+(define polyhedron-envmap "beach.png")
 
-(define clip-near .5) ; clip plane distances - change for fov
+(define clip-near .1) ; clip plane distances - change for fov
 (define clip-far 1000)
 
 (define camera-distance 30.) ; distance of camera from the followed object
@@ -199,6 +205,7 @@
 
 (define title-id 2)
 (define title-appears-in-sec 15) ; title appears in this seconds after running the script
+
 
 ;------------------------------------------------------------------------------
 
@@ -286,18 +293,12 @@
 (with-pixels-renderer render-buffer
     (clip clip-near clip-far)
     (with-primitive tunnel
-        (backfacecull 0)
-        (recalc-normals 0)
-        (hint-none)
-        (normal-colour #(.1 .9 .0))
-        (hint-on 'points)
+        
         ;(hint-off 'depth-sort)
         ;(line-width 10)
         (pdata-map! (λ (n) (vmul n -1)) "n")
-        ;(hint-sphere-map)
-        ;(multitexture 0 (load-texture (string-append data-folder "/textures/" tunnel-texture-0)))
-        ;(multitexture 1 (load-texture (string-append data-folder "/textures/" tunnel-texture-1)))
         (poly-convert-to-indexed)
+        
         (for ([i (in-range 0 (pdata-size) 1)])
             (let* ([c (pdata-ref "p" i)])
                 (set! tunnel-points (cons c tunnel-points))))))
@@ -313,13 +314,12 @@
 
 (with-pixels-renderer render-buffer
     (with-primitive object
-        ;(hint-sphere-map)
-        (colour #(1 1 1))
-        (specular (vector .1 .1 1))
-        (texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
-        (recalc-normals 0)
-        (scale polyhedron-scale)
+        (scale polyhedron-scale)        
         (apply-transform)
+        
+        
+        (pdata-add "p1" "v")
+        (pdata-copy "p" "p1")
         (for ([i (in-range 0 (pdata-size) 1)])
             (let ([c (pdata-ref "p" i)])
                 (set! object-points (cons c object-points))))))
@@ -350,33 +350,85 @@
     (translate (vector tunnel-outer-radius 0 0)))
 
 (define (draw-lines)
-    (wire-colour (rgb->hsv (vector  (abs (sin (time))) (abs (cos (time))) (rndf) .9)))
-    (line-width (* (gl 0) 6))
+    
+    (if (> slide5 .6)
+        (begin
+            (wire-colour (ngl 0))
+            (wire-opacity 1)
+            (line-width (ngl 1)))
+        (wire-opacity 0)
+        
+        )
+    (if (= s2 1)
+        (wire-colour (rgb->hsv (vector  (abs (sin (time))) (abs (cos (time))) (rndf) .9)))
+        (wire-colour 1)
+    )
     
     (with-primitive particles
         (for ([i (in-range 0 particle-sum 1)])
             (let ([v0  (pdata-ref "p" i)]
                     [v1 (pdata-op "closest" "p" i)])
-                (draw-line v0 v1)))))
-
+                (draw-line (vmul v0  1) v1)))))
 
 (define (render-tunnel)
     (define up (vtransform (vector 0 0 1) (mrotate (vector 0 (* 20 (time)) 0))))
     (with-pixels-renderer render-buffer
+        (clip clip-near clip-far)
+        
         (set! object-points '())
         
         (with-primitive tunnel
-            (pdata-index-map! (λ (i c) (vector 1 (ngl i))) "c")
-            (wire-opacity slide1)
-            (point-width (* 100 slide2))
-
+            (pdata-index-map! (λ (i c) (ngl i)) "c")
+            (backfacecull 0)
+            (line-width (* 2 (ngl 0)))
+            (hint-none)
+            (if (> slide8 .7)
+                (hint-on  'vertcols 'wire)
+                (hint-off  'vertcols 'wire))
+            
+            (hint-sphere-map)
+            
+            (multitexture 0 (load-texture (string-append data-folder "/textures/" tunnel-texture-0)))
+            (multitexture 1 (load-texture (string-append data-folder "/textures/" tunnel-texture-1)))
+            (hint-anti-alias)
+            
+            
             )
         
         (with-primitive object
+            (hint-anti-alias)
+            ;(hint-on 'vertcols )
+            
+            #;(when (> slide2 .7)
+                (hint-ignore-depth))
+            
+            (hint-sphere-map)
+            (colour #(1 1 1))            
+            ;(hint-none)            
+            (hint-wire)
+            (line-width (* 4 (ngl 0)))
+            
+            (backfacecull 0)
+            (specular (vector .5 .5 .5))
+            (when (= s1 1)
+                (texture (load-texture (string-append data-folder "/textures/" polyhedron-envmap)))
+                )
+            (recalc-normals 0)
+            (opacity (* solid-opacity (ngl 0)))
             (identity)
-            (rotate (vector 0 0 (* (time) tunnel-outer-radius)))
+            (rotate (vector 0 (gl 0) (* (time) tunnel-outer-radius)))
             (translate (vector (+ (cos(time)) tunnel-outer-radius) (* 5 (abs (sin (time)))) (* 5 (sin (time)))))
-            (scale (+ (abs (sin (gl 0))) .5))
+            (wire-opacity wireopacity)
+            
+            (if (> slide7 .5)
+                (pdata-map! (lambda (p p1 n)
+                        (vadd (vmul n  (snoise (vx p1) (vy p1) (vz p1))) p))
+                    "p" "p1" "n")
+                (pdata-map! (lambda (p p1 n)
+                        p1)
+                    "p" "p1" "n")
+                
+                )
             
             (for ([i (in-range 0 (pdata-size) 1)])
                 (let ([c (pdata-ref "p" i)])
@@ -391,11 +443,24 @@
         
         
         (with-primitive particles
+            (hint-vertcols)
             (for ([i (in-range 0 (length tunnel-points) 1)])
                 (let ([p (list-ref tunnel-points i)])
-                    (pdata-set! "p" i p))))
-        (when (= 1 bn) 
-        (draw-lines))
+                    (pdata-set! "p" i p))
+                )
+            
+            
+            (pdata-index-map! (λ (i c) 
+                    (* 1 point-colour) ) "c")
+            (pdata-index-map! (λ (i s) 
+                    (* point-scale (* 1 (gl i))) ) "s")
+            
+            
+            
+            
+            )
+        
+        (draw-lines)
         
         (with-primitive camera-target
             (identity)
@@ -422,8 +487,21 @@
 (titles-setup (string-append data-folder "/font/chunkfive.ttf"))
 (titles-seek title-id title-appears-in-sec)
 
+(define (osc-set)
+    (set! wireopacity slide1) 
+    (set! solid-opacity slide2) 
+    (set! point-scale slide3)
+    (set! point-colour slide4)
+    
+    (set! clip-near slide6) 
+    ;    (set! camera-distance (* 10 (ngl 0) (abs (+ 1 slide5))))
+    
+    )
+
+
 (define (loop)
     (osc_recieve)
+    (osc-set)
     (render-tunnel)
     (with-primitive plane
         ;(dof render-buffer #:aperture dof-aperture
@@ -434,4 +512,3 @@
         (titles-update)))
 
 (every-frame (loop))
-(show-fps 1)

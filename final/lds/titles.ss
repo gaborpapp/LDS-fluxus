@@ -2,11 +2,11 @@
 (require fluxus-018/fluxus)
 
 (provide titles-setup
-		 titles-seek
-		 titles-update)
+         titles-seek
+         titles-update)
 
 (define tracks (list
-		#(51.641179138 0.980231 "Give my try a love")
+        #(51.641179138 0.980231 "Give my try a love")
         #(141.714285714 0.947282 "I wanna break free")
         #(385.518367346 0.945634 "rippin up sound")
         #(674.539682539 0.939044 "birthday in budapest")
@@ -28,22 +28,22 @@
 
 ; making type primitives and polys
 (define (titles-setup font-path)
-	(set! debug-start-time 0)
-	(set! start-time (flxtime))
+    (set! debug-start-time 0)
+    (set! start-time (flxtime))
 
-	(for [(i (in-range 0 (length tracks)))]
-		(with-state
-			(let [(et (build-extruded-type font-path (vz (list-ref tracks i)) .01))]
-				(let [(ep (type->poly et))]
-					(set! text-prims (append text-prims (list ep)))
-					(with-primitive ep 
-						(translate #(0 0 -9999))
-						(pdata-copy "p" "p1"))
-					(with-primitive et (scale 0)))))))
+    (for [(i (in-range 0 (length tracks)))]
+        (with-state
+            (let [(et (build-extruded-type font-path (vz (list-ref tracks i)) .01))]
+                (let [(ep (type->poly et))]
+                    (set! text-prims (append text-prims (list ep)))
+                    (with-primitive ep 
+                        (translate #(0 0 -9999))
+                        (pdata-copy "p" "p1"))
+                    (with-primitive et (scale 0)))))))
 
 (define (titles-seek title-id [seek-before-sec 10])
-	(set! debug-start-time (- (vector-ref (list-ref tracks title-id) 0) seek-before-sec))
-	(set! start-time (- (flxtime) debug-start-time)))
+    (set! debug-start-time (- (vector-ref (list-ref tracks title-id) 0) seek-before-sec))
+    (set! start-time (- (flxtime) debug-start-time)))
 
 (define (update-text tm)
     (for [(i (in-range 0 (length tracks)))]
@@ -51,11 +51,11 @@
                 (abs (- tm (vx (list-ref tracks next-track)))))
             (set! next-track i)))
     (let* ([rel-pos (- tm (vx (list-ref tracks next-track)))]
-		   [gh-scale (* 3 (/ (abs rel-pos) play-timespan))])
+           [gh-scale (* 3 (/ (abs rel-pos) play-timespan))])
         (when (< (abs rel-pos) play-timespan) 
             (with-primitive (list-ref text-prims next-track)
-				(hint-ignore-depth)
-				(hint-unlit)
+                (hint-ignore-depth)
+                (hint-unlit)
                 (identity)
                 (translate (vector (- (* -.1 (* rel-pos rel-pos rel-pos)) 25) 0 -20))
                 (rotate (vector -15 (* 5 (sin (flxtime))) 0))
@@ -68,5 +68,4 @@
                     "p" "p1")))))
 
 (define (titles-update)
-  	(update-text (- (flxtime) start-time)))
-
+    (update-text (- (flxtime) start-time)))
